@@ -9,12 +9,12 @@ import React, { useState } from "react";
 import { StyleSheet } from "react-native";
 
 const HelloWorldSceneAR = () => {
-  const [text, setText] = useState("1TEST Initializing AR...");
+  const [text, setText] = useState("TEST Initializing AR...");
 
   function onInitialized(state: any, reason: ViroTrackingReason) {
     console.log("onInitialized", state, reason);
     if (state === ViroTrackingStateConstants.TRACKING_NORMAL) {
-      setText("Hello World?");
+      setText("5Hello World?");
     } else if (state === ViroTrackingStateConstants.TRACKING_UNAVAILABLE) {
       // Handle loss of tracking
     }
