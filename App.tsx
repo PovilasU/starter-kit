@@ -1,24 +1,67 @@
+import React, { useState, useCallback } from "react";
 import {
   ViroARScene,
   ViroARSceneNavigator,
   ViroText,
-  ViroTrackingReason,
   ViroTrackingStateConstants,
+  ViroNode,
+  ViroPolyline,
+  ViroMaterials,
 } from "@reactvision/react-viro";
-import React, { useState } from "react";
 import { StyleSheet } from "react-native";
 
-const HelloWorldSceneAR = () => {
-  const [text, setText] = useState("1TEST Initializing AR...");
+// Create the material
+ViroMaterials.createMaterials({
+  line: {
+    diffuseColor: "#FF0000",
+  },
+});
 
-  function onInitialized(state: any, reason: ViroTrackingReason) {
-    console.log("onInitialized", state, reason);
+const MeasureDistanceSceneAR = () => {
+  const [text, setText] = useState("Initializing AR...");
+  const [points, setPoints] = useState<[number, number, number][]>([]);
+  const [distance, setDistance] = useState(0);
+
+  const onInitialized = useCallback((state, reason) => {
     if (state === ViroTrackingStateConstants.TRACKING_NORMAL) {
-      setText("Hello World?");
+      setText("Tap to place points");
     } else if (state === ViroTrackingStateConstants.TRACKING_UNAVAILABLE) {
-      // Handle loss of tracking
+      setText("Tracking unavailable. Please adjust your device.");
     }
-  }
+  }, []);
+
+  const onClick = useCallback((event) => {
+    console.log("Event object:", event);
+    const position = Array.isArray(event)
+      ? event
+      : event.nativeEvent.position || event.position || event;
+    if (!Array.isArray(position) || position.length !== 3) {
+      console.error("Position data is missing or invalid in the event");
+      return;
+    }
+
+    setPoints((prevPoints) => {
+      if (prevPoints.length >= 2) return prevPoints; // Prevent adding more than 2 points
+
+      const newPoints = [...prevPoints, position];
+      if (newPoints.length === 2) {
+        const [p1, p2] = newPoints;
+        const dx = p2[0] - p1[0];
+        const dy = p2[1] - p1[1];
+        const dz = p2[2] - p1[2];
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        setDistance(dist);
+        setText(`Distance: ${dist.toFixed(2)} meters`);
+      }
+      return newPoints;
+    });
+  }, []);
+
+  const resetMeasurement = () => {
+    setPoints([]);
+    setDistance(0);
+    setText("Tap to place points");
+  };
 
   return (
     <ViroARScene onTrackingUpdated={onInitialized}>
@@ -28,6 +71,30 @@ const HelloWorldSceneAR = () => {
         position={[0, 0, -1]}
         style={styles.helloWorldTextStyle}
       />
+      {points.length === 2 && (
+        <ViroPolyline
+          position={[0, 0, 0]}
+          points={points}
+          thickness={0.01}
+          materials={["line"]}
+        />
+      )}
+      <ViroNode position={[0, 0, -1]} onClick={onClick}>
+        <ViroText
+          text="Tap to measure"
+          scale={[0.5, 0.5, 0.5]}
+          position={[0, -0.5, 0]}
+          style={styles.helloWorldTextStyle}
+        />
+      </ViroNode>
+      <ViroNode position={[0, 0, -1]} onClick={resetMeasurement}>
+        <ViroText
+          text="Reset"
+          scale={[0.5, 0.5, 0.5]}
+          position={[0, -1, 0]}
+          style={styles.helloWorldTextStyle}
+        />
+      </ViroNode>
     </ViroARScene>
   );
 };
@@ -37,7 +104,7 @@ export default () => {
     <ViroARSceneNavigator
       autofocus={true}
       initialScene={{
-        scene: HelloWorldSceneAR,
+        scene: MeasureDistanceSceneAR,
       }}
       style={styles.f1}
     />
